@@ -1,27 +1,31 @@
 import {
   ChannelSuccessResult,
-  DeployConfig,
+  ActionConfig,
   deployPreview,
   deployProductionSite,
-  ProductionDeployConfig,
+  ProductionActionConfig,
   ProductionSuccessResult,
+  removePreview,
+  RemovalSuccessResult,
 } from "../src/deploy";
 import * as exec from "@actions/exec";
 import {
   channelError,
   channelMultiSiteSuccess,
+  channelRemovalSuccess,
   channelSingleSiteSuccess,
   liveDeployMultiSiteSuccess,
   liveDeploySingleSiteSuccess,
+  productionChannelRemovalSkipped,
 } from "./samples/cliOutputs";
 
-const baseChannelDeployConfig: DeployConfig = {
+const baseChannelActionConfig: ActionConfig = {
   channelId: "my-channel",
   expires: undefined,
   projectId: "my-project",
 };
 
-const baseLiveDeployConfig: ProductionDeployConfig = {
+const baseLiveActionConfig: ProductionActionConfig = {
   projectId: "my-project",
 };
 
@@ -47,15 +51,20 @@ async function fakeExec(
   }
 
   const isChannelDeploy = args[0] === "hosting:channel:deploy";
+  const isChannelRemove = args[0] === "hosting:channel:delete";
   let successOutput;
 
   if (args.includes("--target")) {
     successOutput = isChannelDeploy
       ? channelMultiSiteSuccess
+      : isChannelRemove
+      ? channelRemovalSuccess
       : liveDeployMultiSiteSuccess;
   } else {
     successOutput = isChannelDeploy
       ? channelSingleSiteSuccess
+      : isChannelRemove
+      ? channelRemovalSuccess
       : liveDeploySingleSiteSuccess;
   }
 
@@ -71,7 +80,7 @@ describe("deploy", () => {
 
     const deployOutput: ChannelSuccessResult = (await deployPreview(
       "my-file",
-      baseChannelDeployConfig
+      baseChannelActionConfig
     )) as ChannelSuccessResult;
 
     expect(exec.exec).toBeCalledTimes(2);
@@ -95,7 +104,7 @@ describe("deploy", () => {
 
       const deployOutput: ChannelSuccessResult = (await deployPreview(
         "my-file",
-        baseChannelDeployConfig
+        baseChannelActionConfig
       )) as ChannelSuccessResult;
 
       expect(exec.exec).toBeCalled();
@@ -112,8 +121,8 @@ describe("deploy", () => {
       // @ts-ignore read-only property
       exec.exec = jest.fn(fakeExec);
 
-      const config: DeployConfig = {
-        ...baseChannelDeployConfig,
+      const config: ActionConfig = {
+        ...baseChannelActionConfig,
         target: "my-second-site",
       };
 
@@ -135,7 +144,7 @@ describe("deploy", () => {
 
       const deployOutput: ProductionSuccessResult = (await deployProductionSite(
         "my-file",
-        baseLiveDeployConfig
+        baseLiveActionConfig
       )) as ProductionSuccessResult;
 
       expect(exec.exec).toBeCalled();
@@ -148,6 +157,29 @@ describe("deploy", () => {
       expect(deployFlags).toContain("deploy");
       expect(deployFlags).toContain("--only");
       expect(deployFlags).toContain("hosting");
+    });
+  });
+});
+
+describe("remove deployment on pr close", () => {
+  describe("remove preview channel", () => {
+    it("calls exec and interprets the output", async () => {
+      // @ts-ignore read-only property
+      exec.exec = jest.fn(fakeExec);
+
+      const removeOutput: RemovalSuccessResult = (await removePreview(
+        "my-file",
+        baseChannelActionConfig
+      )) as RemovalSuccessResult;
+
+      expect(exec.exec).toBeCalled();
+      expect(removeOutput).toEqual(channelRemovalSuccess);
+
+      // Check the arguments that exec was called with
+      // @ts-ignore Jest adds a magic "mock" property
+      const args = exec.exec.mock.calls;
+      const removeFlags = args[0][1];
+      expect(removeFlags).toContain("hosting:channel:delete");
     });
   });
 });

@@ -2,6 +2,8 @@ import {
   ChannelSuccessResult,
   ErrorResult,
   ProductionSuccessResult,
+  RemovalSuccessResult,
+  RemovalSkippedResult,
 } from "../../src/deploy";
 
 export const commitId = "fe211ff";
@@ -36,6 +38,14 @@ export const channelSingleSiteSuccess: ChannelSuccessResult = {
       expireTime: "2020-10-27T21:32:57.233344586Z",
     },
   },
+};
+
+export const channelRemovalSuccess: RemovalSuccessResult = {
+  status: "success",
+};
+
+export const productionChannelRemovalSkipped: RemovalSkippedResult = {
+  status: "skipped",
 };
 
 export const channelError: ErrorResult = {

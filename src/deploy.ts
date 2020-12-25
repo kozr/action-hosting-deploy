@@ -28,6 +28,14 @@ export type ErrorResult = {
   error: string;
 };
 
+export type RemovalSuccessResult = {
+  status: "success";
+};
+
+export type RemovalSkippedResult = {
+  status: "skipped";
+};
+
 export type ChannelSuccessResult = {
   status: "success";
   result: { [key: string]: SiteDeploy };
@@ -40,14 +48,14 @@ export type ProductionSuccessResult = {
   };
 };
 
-export type DeployConfig = {
+export type ActionConfig = {
   projectId: string;
   expires: string;
   channelId: string;
   target?: string;
 };
 
-export type ProductionDeployConfig = {
+export type ProductionActionConfig = {
   projectId: string;
   target?: string;
 };
@@ -72,7 +80,7 @@ async function execWithCredentials(
   gacFilename,
   debug: boolean = false
 ) {
-  let deployOutputBuf: Buffer[] = [];
+  let actionOutputBuf: Buffer[] = [];
 
   try {
     await exec(
@@ -87,7 +95,7 @@ async function execWithCredentials(
       {
         listeners: {
           stdout(data: Buffer) {
-            deployOutputBuf.push(data);
+            actionOutputBuf.push(data);
           },
         },
         env: {
@@ -98,12 +106,12 @@ async function execWithCredentials(
       }
     );
   } catch (e) {
-    console.log(Buffer.concat(deployOutputBuf).toString("utf-8"));
+    console.log(Buffer.concat(actionOutputBuf).toString("utf-8"));
     console.log(e.message);
 
     if (debug === false) {
       console.log(
-        "Retrying deploy with the --debug flag for better error output"
+        "Retrying action with the --debug flag for better error output"
       );
       await execWithCredentials(args, projectId, gacFilename, true);
     } else {
@@ -111,16 +119,55 @@ async function execWithCredentials(
     }
   }
 
-  return deployOutputBuf.length
-    ? deployOutputBuf[deployOutputBuf.length - 1].toString("utf-8")
+  return actionOutputBuf.length
+    ? actionOutputBuf[actionOutputBuf.length - 1].toString("utf-8")
     : ""; // output from the CLI
+}
+
+export async function removePreview(
+  gacFilename: string,
+  actionConfig: ActionConfig
+) {
+  const { projectId, channelId } = actionConfig;
+
+  const removeDeployment = await execWithCredentials(
+    ["hosting:channel:delete", channelId],
+    projectId,
+    gacFilename
+  );
+
+  const removeResults = JSON.parse(removeDeployment.trim()) as
+    | RemovalSkippedResult
+    | RemovalSuccessResult
+    | ErrorResult;
+
+  return removeResults;
+}
+
+export async function removeProductionPreview(
+  gacFilename,
+  productionActionConfig: ProductionActionConfig
+) {
+  const { projectId, target } = productionActionConfig;
+
+  const deploymentText = await execWithCredentials(
+    ["deploy", "--only", `hosting${target ? ":" + target : ""}`],
+    projectId,
+    gacFilename
+  );
+
+  const deploymentResult = JSON.parse(deploymentText) as
+    | ProductionSuccessResult
+    | ErrorResult;
+
+  return deploymentResult;
 }
 
 export async function deployPreview(
   gacFilename: string,
-  deployConfig: DeployConfig
+  actionConfig: ActionConfig
 ) {
-  const { projectId, channelId, target, expires } = deployConfig;
+  const { projectId, channelId, target, expires } = actionConfig;
 
   const deploymentText = await execWithCredentials(
     [
@@ -142,9 +189,9 @@ export async function deployPreview(
 
 export async function deployProductionSite(
   gacFilename,
-  productionDeployConfig: ProductionDeployConfig
+  productionActionConfig: ProductionActionConfig
 ) {
-  const { projectId, target } = productionDeployConfig;
+  const { projectId, target } = productionActionConfig;
 
   const deploymentText = await execWithCredentials(
     ["deploy", "--only", `hosting${target ? ":" + target : ""}`],
