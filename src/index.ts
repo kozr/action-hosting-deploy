@@ -62,8 +62,6 @@ async function run() {
     startGroup("Verifying firebase.json exists");
 
     if (entryPoint !== ".") {
-      console.log(`context.payload.action: ${context.payload.action}`);
-      console.log(`context.action: ${context.action}`);
       console.log(`Changing to directory: ${entryPoint}`);
       try {
         process.chdir(entryPoint);
