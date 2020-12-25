@@ -50,7 +50,7 @@ const token = process.env.GITHUB_TOKEN || getInput("repoToken");
 const octokit = token ? getOctokit(token) : undefined;
 const entryPoint = getInput("entryPoint");
 const target = getInput("target");
-const removeOnClose = getInput("removeOnClose");
+const removeOnClose = getInput("removeOnClose") || false;
 
 async function run() {
   const isPullRequest = !!context.payload.pull_request;
@@ -95,14 +95,13 @@ async function run() {
     } = context;
 
     // Checking if the action is trigged by a PR closing
-    if (removeOnClose && action === "closed") {
+    if (action === "closed") {
       startGroup("Removing preview channel");
-
-      if (isProductionDeploy) {
+      if (!removeOnClose || isProductionDeploy) {
         await finish({
           conclusion: "skipped",
           output: {
-            title: `Skipping remove for production deployment`,
+            title: `Skipping remove in production channel, or because removeOnClose option was false`,
           },
         });
       } else {
