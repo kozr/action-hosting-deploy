@@ -51,7 +51,6 @@ const entryPoint = getInput("entryPoint");
 const target = getInput("target");
 
 async function run() {
-  console.log(context.action);
   const isPullRequest = !!context.payload.pull_request;
 
   let finish = (details: Object) => console.log(details);
@@ -63,6 +62,8 @@ async function run() {
     startGroup("Verifying firebase.json exists");
 
     if (entryPoint !== ".") {
+      console.log(`context.payload.action: ${context.payload.action}`);
+      console.log(`context.action: ${context.action}`);
       console.log(`Changing to directory: ${entryPoint}`);
       try {
         process.chdir(entryPoint);
@@ -164,5 +165,4 @@ async function run() {
   }
 }
 
-console.log(`context.payload.action: ${context.payload.action}`);
 run();
