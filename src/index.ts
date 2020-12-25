@@ -163,4 +163,6 @@ async function run() {
   }
 }
 
-run();
+if (context.payload.action === "closed") {
+  run();
+}
