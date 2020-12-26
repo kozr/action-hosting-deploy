@@ -131,7 +131,7 @@ export async function removePreview(
   const { projectId, channelId } = actionConfig;
 
   const removeDeployment = await execWithCredentials(
-    ["hosting:channel:delete", channelId],
+    ["hosting:channel:delete", channelId, "--force"],
     projectId,
     gacFilename
   );
@@ -142,25 +142,6 @@ export async function removePreview(
     | ErrorResult;
 
   return removeResults;
-}
-
-export async function removeProductionPreview(
-  gacFilename,
-  productionActionConfig: ProductionActionConfig
-) {
-  const { projectId, target } = productionActionConfig;
-
-  const deploymentText = await execWithCredentials(
-    ["deploy", "--only", `hosting${target ? ":" + target : ""}`],
-    projectId,
-    gacFilename
-  );
-
-  const deploymentResult = JSON.parse(deploymentText) as
-    | ProductionSuccessResult
-    | ErrorResult;
-
-  return deploymentResult;
 }
 
 export async function deployPreview(
