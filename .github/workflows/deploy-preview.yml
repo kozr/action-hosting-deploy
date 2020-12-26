@@ -16,7 +16,7 @@ name: Deploy Preview
 
 on:
   pull_request:
-    types: [closed, synchronize]
+    types: [closed, synchronize, reopened]
 
 jobs:
   preview:
